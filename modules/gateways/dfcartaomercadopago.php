@@ -160,3 +160,58 @@ function dfcartaomercadopago_capture($params)
 
     return ['status'=>'declined'];
 }
+
+function dfcartaomercadopago_refund($params)
+{
+    $accessToken = $params['AccessTokenProducao'];
+
+    $paymentId = $params['transid']; // ID pagamento MP
+    $amount = (float) $params['amount'];
+
+    if (!$paymentId) {
+        return [
+            'status' => 'error',
+            'rawdata' => 'Transação não encontrada'
+        ];
+    }
+
+    $payload = [
+        "amount" => $amount
+    ];
+
+    $ch = curl_init(
+        "https://api.mercadopago.com/v1/payments/$paymentId/refunds"
+    );
+
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($payload),
+        CURLOPT_HTTPHEADER => [
+            "Authorization: Bearer ".$accessToken,
+            "Content-Type: application/json",
+            "X-Idempotency-Key: refund-".$paymentId
+        ]
+    ]);
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    $result = json_decode($response, true);
+
+    logTransaction('dfcartaomercadopago', $result, "Refund");
+
+    if (isset($result['id'])) {
+        return [
+            'status' => 'success',
+            'transid' => $result['id'],
+            'rawdata' => $result
+        ];
+    }
+
+    return [
+        'status' => 'error',
+        'rawdata' => $result
+    ];
+}
+
