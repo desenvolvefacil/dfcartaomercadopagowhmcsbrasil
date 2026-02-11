@@ -102,11 +102,18 @@ $payment=mpRequest(
 );
 
 if($payment['status']=='approved'){
+
+    $fee = 0;
+    
+    if (!empty($payment['fee_details'][0]['amount'])) {
+        $fee = $payment['fee_details'][0]['amount'];
+    }
+    
     addInvoicePayment(
         $invoiceId,
         $payment['id'],
         $amount,
-        0,
+        $fee,
         $gateway
     );
     logTransaction($gateway, $payment, "Approved");
